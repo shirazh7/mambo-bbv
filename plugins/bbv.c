@@ -51,8 +51,6 @@ void inc_bbv_syscall_in_list(bbv_count_t *head, unsigned int search_syscall)
     else
       break;
   }
-  currentsyscall = get_svc_type();
-  printf("current syscall is: %d", currentsyscall);
   bbv_count_t *new_bbv_count = (bbv_count_t *)malloc(sizeof(bbv_count_t));
   new_bbv_count->syscall = search_syscall;
   new_bbv_count->called = 1;
@@ -107,7 +105,7 @@ void bbv_exe(bbv_count_t *bbv_list)
 {
   assert(bbv_list != NULL);
 
-  inc_bbv_syscall_in_list(bbv_list, currentsyscall /*get_svc_type() /*needs to be r8*/);
+  inc_bbv_syscall_in_list(bbv_list, get_svc_type() /*needs to be r8*/);
 }
 
 int bbv_hook(mambo_context *ctx)
