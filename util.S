@@ -408,6 +408,6 @@ __try_memcpy_error:
 .type get_svc_type, %function
 
 get_svc_type:
-  MOV X0, X8
+  MOV X0, X4
   RET
 .endfunc

@@ -62,7 +62,7 @@ void print_bbv_list(bbv_count_t *head)
 {
   while (head != NULL)
   {
-    printf("syscall %d called %d times\n", head->syscall, head->called);
+    printf("System call %d called %d times\n", head->syscall, head->called);
 
     head = head->next;
   }
@@ -119,6 +119,7 @@ int bbv_hook(mambo_context *ctx)
     emit_set_reg_ptr(ctx, reg0, bbv_list);
     emit_set_reg(ctx, reg1, mambo_get_inst_type(ctx));
     // emit_set_reg(ctx, reg2, (uintptr_t)mambo_get_source_addr(ctx));
+    emit_mov(ctx, 4, 8);
     emit_safe_fcall(ctx, bbv_exe, 1);
     emit_pop(ctx, (1 << reg0) | (1 << reg1) | (1 << reg2));
     return 0;
