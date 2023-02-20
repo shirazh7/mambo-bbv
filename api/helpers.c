@@ -832,4 +832,13 @@ int emit_indirect_branch_by_spc(mambo_context *ctx, enum reg reg)
   }
 #endif
 }
+
+#define a64_brk() *(uint32_t *)(write_p++) = 0xD4200000;
+
+int emit_brk(mambo_context *ctx)
+{
+  uint8_t *write_p = mambo_get_cc_addr(ctx);
+  a64_brk();
+  return 0;
+}
 #endif

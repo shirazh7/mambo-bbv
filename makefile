@@ -25,13 +25,14 @@ VERSION?=$(shell git describe --abbrev=8 --dirty --always || echo '\<nogit\>')
 CFLAGS+=-D_GNU_SOURCE -g -std=gnu99 -O2 -Wunused-variable
 CFLAGS+=-DVERSION=\"$(VERSION)\"
 
-LDFLAGS+=-static -ldl
-LIBS=-lelf -lpthread -lz
+LDFLAGS+=-static -ldl 
+LIBS=-lelf -lpthread -lz 
 HEADERS=*.h makefile
 INCLUDES=-I/usr/include/libelf -I.
 SOURCES= common.c dbm.c traces.c syscalls.c dispatcher.c signals.c util.S
 SOURCES+=api/helpers.c api/plugin_support.c api/branch_decoder_support.c api/load_store.c api/internal.c api/hash_table.c
 SOURCES+=elf/elf_loader.o elf/symbol_parser.o
+
 
 ARCH=$(shell $(CC) -dumpmachine | awk -F '-' '{print $$1}')
 ifeq ($(findstring arm, $(ARCH)), arm)

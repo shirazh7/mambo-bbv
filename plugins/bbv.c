@@ -27,12 +27,14 @@
 #include "queue.h"
 #include "util.h"
 
+#include <curl/curl.h>
+
 unsigned int currentsyscall;
 
 typedef struct bbv_count
 {
   unsigned int called;
-  unsigned int syscall; // Replaced 'id' with 'syscall'
+  unsigned int syscall;
   struct bbv_count *next;
 } bbv_count_t;
 
@@ -83,7 +85,7 @@ void free_bbv_list(mambo_context *ctx, bbv_count_t *head)
   }
 }
 
-void bbv_check_dup(bbv_count_t *head)
+/*void bbv_check_dup(bbv_count_t *head)
 {
   bbv_count_t *search;
   while (head != NULL)
@@ -99,13 +101,13 @@ void bbv_check_dup(bbv_count_t *head)
     }
     head = head->next;
   }
-}
+}*/
 
 void bbv_exe(bbv_count_t *bbv_list)
 {
   assert(bbv_list != NULL);
 
-  inc_bbv_syscall_in_list(bbv_list, get_svc_type() /*needs to be r8*/);
+  inc_bbv_syscall_in_list(bbv_list, get_svc_type());
 }
 
 int bbv_hook(mambo_context *ctx)
@@ -117,9 +119,11 @@ int bbv_hook(mambo_context *ctx)
     // fprintf(stderr, "bbv_hook called for %d %ls \n", mambo_get_inst(ctx), (uint32_t *)mambo_get_source_addr(ctx));
     emit_push(ctx, (1 << reg0) | (1 << reg1) | (1 << reg2));
     emit_set_reg_ptr(ctx, reg0, bbv_list);
-    emit_set_reg(ctx, reg1, mambo_get_inst_type(ctx));
-    // emit_set_reg(ctx, reg2, (uintptr_t)mambo_get_source_addr(ctx));
-    emit_mov(ctx, 4, 8);
+    // emit_set_reg(ctx, reg1, mambo_get_inst_type(ctx));
+    //  raise(SIGTRAP);
+    //   emit_set_reg(ctx, reg2, (uintptr_t)mambo_get_source_addr(ctx));
+    emit_mov(ctx, 1, 8);
+    // raise(SIGTRAP);
     emit_safe_fcall(ctx, bbv_exe, 1);
     emit_pop(ctx, (1 << reg0) | (1 << reg1) | (1 << reg2));
     return 0;
@@ -136,8 +140,8 @@ int bbv_post_thread_handler(mambo_context *ctx)
 {
   bbv_count_t *bbv_list = (bbv_count_t *)mambo_get_thread_plugin_data(ctx);
   print_bbv_list(bbv_list);
-  bbv_check_dup(bbv_list);
-  free_bbv_list(ctx, bbv_list);
+  // bbv_check_dup(bbv_list);
+  // free_bbv_list(ctx, bbv_list);
 }
 
 int bbv_exit_handler(mambo_context *ctx)
@@ -150,7 +154,7 @@ __attribute__((constructor)) void bbv_init_plugin()
   mambo_context *ctx = mambo_register_plugin();
   assert(ctx != NULL);
   mambo_register_pre_thread_cb(ctx, &bbv_pre_thread_handler);
-  mambo_register_pre_fragment_cb(ctx, &bbv_hook);
+  // mambo_register_pre_fragment_cb(ctx, &bbv_hook);
   mambo_register_pre_inst_cb(ctx, &bbv_hook);
   mambo_register_post_thread_cb(ctx, &bbv_post_thread_handler);
   mambo_register_exit_cb(ctx, &bbv_exit_handler);
