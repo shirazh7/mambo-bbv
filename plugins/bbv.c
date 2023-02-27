@@ -27,14 +27,10 @@
 #include "queue.h"
 #include "util.h"
 
-#include <curl/curl.h>
-
-unsigned int currentsyscall;
-
 typedef struct bbv_count
 {
-  unsigned int called;
-  unsigned int syscall;
+  unsigned int called;  // number of times the system call is called
+  unsigned int syscall; // the system call number
   struct bbv_count *next;
 } bbv_count_t;
 
@@ -67,6 +63,138 @@ void print_bbv_list(bbv_count_t *head)
     printf("System call %d called %d times\n", head->syscall, head->called);
 
     head = head->next;
+  }
+}
+
+// writes to text file as a string
+void write_bbv_list_to_string_file(const char *filename, bbv_count_t *head)
+{
+  FILE *f = fopen(filename, "w");
+  if (!f)
+  {
+    printf("Error opening file %s for writing.\n", filename);
+    return;
+  }
+
+  while (head != NULL)
+  {
+    fprintf(f, "System call %d called %d times\n", head->syscall, head->called);
+    head = head->next;
+  }
+
+  fclose(f);
+}
+
+void write_bbv_list_to_file(const char *filename, bbv_count_t *head)
+{
+  FILE *f = fopen(filename, "w");
+  if (!f)
+  {
+    printf("Error opening file %s for writing.\n", filename);
+    return;
+  }
+
+  while (head != NULL)
+  {
+    fprintf(f, "%d \n", head->syscall);
+    head = head->next;
+  }
+  fclose(f);
+}
+
+// saves the system cals to a file seperated by commas and space
+void write_linklist_to_file(bbv_count_t *head, const char *filename)
+{
+  FILE *f = fopen(filename, "wb");
+  if (f == NULL)
+  {
+    fprintf(stderr, "Error opening file: %s\n", filename);
+    return;
+  }
+
+  for (bbv_count_t *curr = head; curr != NULL; curr = curr->next)
+  {
+    fprintf(f, "%d, ", curr->syscall);
+  }
+
+  fclose(f);
+}
+
+bool compare_bbv_to_file(bbv_count_t *head, const char *filename)
+{
+  FILE *fp = fopen(filename, "r");
+  if (!fp)
+  {
+    perror("Error opening file");
+    return false;
+  }
+
+  int syscall;
+  bool found_in_file;
+  bool all_matched = true;
+  while (fscanf(fp, "%d", &syscall) == 1)
+  {
+    bbv_count_t *current = head;
+    found_in_file = false;
+    while (current != NULL)
+    {
+      if (current->syscall == syscall)
+      {
+        // printf("Success on sys %d\n", current->syscall);
+        found_in_file = true;
+        break;
+      }
+      current = current->next;
+    }
+    if (!found_in_file)
+    {
+      printf("System call found in file was not using during runtime:  %d\n", syscall);
+      // all_matched = false;
+    }
+  }
+  fclose(fp);
+  bbv_count_t *current = head;
+  while (current != NULL)
+  {
+    found_in_file = false;
+    fp = fopen(filename, "r");
+    while (fscanf(fp, "%d", &syscall) == 1)
+    {
+      if (current->syscall == syscall)
+      {
+        found_in_file = true;
+        break;
+      }
+    }
+    fclose(fp);
+    if (!found_in_file)
+    {
+      printf("failed on system call xxx %d\n", current->syscall);
+      all_matched = false;
+    }
+    current = current->next;
+  }
+  return all_matched;
+
+  /*if (all_matched)
+    {
+      printf("All system calls matched\n");
+    }
+    else
+    {
+      printf("All system calls did not match\n");
+    }*/
+}
+
+int check_all_matched(all_matched)
+{
+  if (all_matched)
+  {
+    printf("All system calls matched\n");
+  }
+  else
+  {
+    printf("All system calls did not match\n");
   }
 }
 
@@ -106,13 +234,12 @@ void free_bbv_list(mambo_context *ctx, bbv_count_t *head)
 void bbv_exe(bbv_count_t *bbv_list)
 {
   assert(bbv_list != NULL);
-
   inc_bbv_syscall_in_list(bbv_list, get_svc_type());
+  // compare_bbv_to_file(bbv_list, "syscall_list.txt");
 }
 
 int bbv_hook(mambo_context *ctx)
 {
-
   if (ctx->code.inst == A64_SVC)
   {
     bbv_count_t *bbv_list = (bbv_count_t *)mambo_get_thread_plugin_data(ctx);
@@ -120,8 +247,8 @@ int bbv_hook(mambo_context *ctx)
     emit_push(ctx, (1 << reg0) | (1 << reg1) | (1 << reg2));
     emit_set_reg_ptr(ctx, reg0, bbv_list);
     // emit_set_reg(ctx, reg1, mambo_get_inst_type(ctx));
-    //  raise(SIGTRAP);
-    //   emit_set_reg(ctx, reg2, (uintptr_t)mambo_get_source_addr(ctx));
+    // raise(SIGTRAP);
+    // emit_set_reg(ctx, reg2, (uintptr_t)mambo_get_source_addr(ctx));
     emit_mov(ctx, 1, 8);
     // raise(SIGTRAP);
     emit_safe_fcall(ctx, bbv_exe, 1);
@@ -129,6 +256,7 @@ int bbv_hook(mambo_context *ctx)
     return 0;
   }
 }
+
 int bbv_pre_thread_handler(mambo_context *ctx)
 {
   bbv_count_t *bbv_list = (bbv_count_t *)mambo_alloc(ctx, sizeof(bbv_count_t));
@@ -139,9 +267,13 @@ int bbv_pre_thread_handler(mambo_context *ctx)
 int bbv_post_thread_handler(mambo_context *ctx)
 {
   bbv_count_t *bbv_list = (bbv_count_t *)mambo_get_thread_plugin_data(ctx);
-  print_bbv_list(bbv_list);
+
+  check_all_matched(compare_bbv_to_file(bbv_list, "syscall_list.txt"));
+  // print_bbv_list(bbv_list);
+  // write_bbv_list_to_file("syscall_list.txt", bbv_list);
+  write_bbv_list_to_string_file("output.txt", bbv_list);
   // bbv_check_dup(bbv_list);
-  // free_bbv_list(ctx, bbv_list);
+  free_bbv_list(ctx, bbv_list);
 }
 
 int bbv_exit_handler(mambo_context *ctx)
@@ -160,4 +292,5 @@ __attribute__((constructor)) void bbv_init_plugin()
   mambo_register_exit_cb(ctx, &bbv_exit_handler);
   setlocale(LC_NUMERIC, "");
 }
+
 #endif
