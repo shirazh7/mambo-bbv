@@ -5,7 +5,7 @@ System call 48 called 11 times
 System call 56 called 9 times
 System call 79 called 41 times
 System call 57 called 14 times
-System call 63 called 15 times
+System call 63 called 21 times
 System call 215 called 5 times
 System call 226 called 6 times
 System call 96 called 1 times

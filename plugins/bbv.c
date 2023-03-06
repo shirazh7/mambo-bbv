@@ -69,6 +69,7 @@ void print_bbv_list(bbv_count_t *head)
 // writes to text file as a string
 void write_bbv_list_to_string_file(const char *filename, bbv_count_t *head)
 {
+  printf("Entering write_bbv_to_string_file \n");
   FILE *f = fopen(filename, "w");
   if (!f)
   {
@@ -83,11 +84,13 @@ void write_bbv_list_to_string_file(const char *filename, bbv_count_t *head)
   }
 
   fclose(f);
+  printf("Exiting write_bbv_to_string_file \n");
 }
 
 void write_bbv_list_to_file(const char *filename, bbv_count_t *head)
 {
-  FILE *f = fopen(filename, "w");
+  printf("Entering write_bbv_to_file \n");
+  FILE *f = fopen(filename, "w+");
   if (!f)
   {
     printf("Error opening file %s for writing.\n", filename);
@@ -100,9 +103,10 @@ void write_bbv_list_to_file(const char *filename, bbv_count_t *head)
     head = head->next;
   }
   fclose(f);
+  printf("Exiting write_bbv_to_file \n");
 }
 
-// saves the system cals to a file seperated by commas and space
+/*// saves the system cals to a file seperated by commas and space
 void write_linklist_to_file(bbv_count_t *head, const char *filename)
 {
   FILE *f = fopen(filename, "wb");
@@ -118,11 +122,13 @@ void write_linklist_to_file(bbv_count_t *head, const char *filename)
   }
 
   fclose(f);
-}
+}*/
 
 bool compare_bbv_to_file(bbv_count_t *head, const char *filename)
 {
+  printf("Entering compare_bbv_to_file \n");
   FILE *fp = fopen(filename, "r");
+  printf("Entering compare_bbv_to_file - File 1 \n");
   if (!fp)
   {
     perror("Error opening file");
@@ -153,11 +159,14 @@ bool compare_bbv_to_file(bbv_count_t *head, const char *filename)
     }
   }
   fclose(fp);
+  printf("Closed File 1 in compare_bbv_to_file \n");
+
   bbv_count_t *current = head;
   while (current != NULL)
   {
+    printf("Entering compare_bbv_to_file - File 2 \n");
     found_in_file = false;
-    fp = fopen(filename, "r");
+    FILE *fp = fopen(filename, "r");
     while (fscanf(fp, "%d", &syscall) == 1)
     {
       if (current->syscall == syscall)
@@ -166,7 +175,6 @@ bool compare_bbv_to_file(bbv_count_t *head, const char *filename)
         break;
       }
     }
-    fclose(fp);
     if (!found_in_file)
     {
       printf("failed on system call xxx %d\n", current->syscall);
@@ -174,27 +182,25 @@ bool compare_bbv_to_file(bbv_count_t *head, const char *filename)
     }
     current = current->next;
   }
+  printf("Exiting compare_bbv_to_file \n");
   return all_matched;
-
-  /*if (all_matched)
-    {
-      printf("All system calls matched\n");
-    }
-    else
-    {
-      printf("All system calls did not match\n");
-    }*/
+  printf("Returning all_matched in compare_bbv_to_file \n");
 }
 
-int check_all_matched(all_matched)
+int check_all_matched(bool all_matched)
 {
   if (all_matched)
   {
+    printf("Entering IF statement check_all_matched \n");
     printf("All system calls matched\n");
+    return 0;
   }
   else
   {
+    printf("Entering ELSE statement check_all_matched \n");
     printf("All system calls did not match\n");
+    printf("Exiting program check_all_matched \n");
+    return 1;
   }
 }
 
@@ -209,7 +215,7 @@ void free_bbv_list(mambo_context *ctx, bbv_count_t *head)
   {
     last = head;
     head = head->next;
-    free(head);
+    mambo_free(ctx, last);
   }
 }
 
@@ -235,7 +241,6 @@ void bbv_exe(bbv_count_t *bbv_list)
 {
   assert(bbv_list != NULL);
   inc_bbv_syscall_in_list(bbv_list, get_svc_type());
-  // compare_bbv_to_file(bbv_list, "syscall_list.txt");
 }
 
 int bbv_hook(mambo_context *ctx)
@@ -267,11 +272,10 @@ int bbv_pre_thread_handler(mambo_context *ctx)
 int bbv_post_thread_handler(mambo_context *ctx)
 {
   bbv_count_t *bbv_list = (bbv_count_t *)mambo_get_thread_plugin_data(ctx);
-
-  check_all_matched(compare_bbv_to_file(bbv_list, "syscall_list.txt"));
-  // print_bbv_list(bbv_list);
-  // write_bbv_list_to_file("syscall_list.txt", bbv_list);
+  check_all_matched(compare_bbv_to_file(bbv_list, "whitelist.txt"));
+  write_bbv_list_to_file("syscall_list_runtime.txt", bbv_list);
   write_bbv_list_to_string_file("output.txt", bbv_list);
+  print_bbv_list(bbv_list);
   // bbv_check_dup(bbv_list);
   free_bbv_list(ctx, bbv_list);
 }
@@ -294,3 +298,6 @@ __attribute__((constructor)) void bbv_init_plugin()
 }
 
 #endif
+
+// print off syscall as it is happening
+// create a dashboard
