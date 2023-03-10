@@ -26,6 +26,8 @@
 #include "../plugins.h"
 #include "queue.h"
 #include "util.h"
+#include <stdlib.h>
+#include <curl/curl.h>
 
 typedef struct bbv_count
 {
@@ -33,6 +35,70 @@ typedef struct bbv_count
   unsigned int syscall; // the system call number
   struct bbv_count *next;
 } bbv_count_t;
+
+// implement a GET function that uses curl to post the data to a localhost server
+int curl_get()
+{
+  CURL *curl;
+  CURLcode res;
+  FILE *fp;
+
+  // Open the file for reading
+  fp = fopen("syscall_list_runtime.txt", "r");
+  if (!fp)
+  {
+    printf("Error opening file\n");
+    return 1;
+  }
+
+  // Get the size of the file
+  fseek(fp, 0L, SEEK_END);
+  long int file_size = ftell(fp);
+  rewind(fp);
+
+  // Allocate a buffer to hold the file contents
+  char *buffer = (char *)malloc(sizeof(char) * file_size);
+
+  // Read the file into the buffer
+  size_t elements_read = fread(buffer, sizeof(char), file_size, fp);
+  if (elements_read != file_size)
+  {
+    fprintf(stderr, "Error reading file\n");
+    return 1;
+  }
+
+  // Initialize curl
+  curl = curl_easy_init();
+  if (curl)
+  {
+    struct curl_slist *headers = NULL;
+    headers = curl_slist_append(headers, "Content-Type: text/plain");
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    // Set the URL
+    curl_easy_setopt(curl, CURLOPT_URL, "http://localhost:3001/api/data/saveSyscallData");
+    // Set the POST method
+    curl_easy_setopt(curl, CURLOPT_POST, 1L);
+    // Set the buffer as the request body
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, buffer);
+    // Perform the request
+    res = curl_easy_perform(curl);
+
+    // Check for errors
+    if (res != CURLE_OK)
+    {
+      fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+    }
+
+    // Cleanup
+    curl_easy_cleanup(curl);
+  }
+
+  // Close the file and free the buffer
+  fclose(fp);
+  free(buffer);
+
+  return 0;
+}
 
 void inc_bbv_syscall_in_list(bbv_count_t *head, unsigned int search_syscall)
 {
@@ -106,24 +172,6 @@ void write_bbv_list_to_file(const char *filename, bbv_count_t *head)
   printf("Exiting write_bbv_to_file \n");
 }
 
-/*// saves the system cals to a file seperated by commas and space
-void write_linklist_to_file(bbv_count_t *head, const char *filename)
-{
-  FILE *f = fopen(filename, "wb");
-  if (f == NULL)
-  {
-    fprintf(stderr, "Error opening file: %s\n", filename);
-    return;
-  }
-
-  for (bbv_count_t *curr = head; curr != NULL; curr = curr->next)
-  {
-    fprintf(f, "%d, ", curr->syscall);
-  }
-
-  fclose(f);
-}*/
-
 bool compare_bbv_to_file(bbv_count_t *head, const char *filename)
 {
   printf("Entering compare_bbv_to_file \n");
@@ -193,13 +241,17 @@ int check_all_matched(bool all_matched)
   {
     printf("Entering IF statement check_all_matched \n");
     printf("All system calls matched\n");
+    printf("Entering curl 1\n");
+    curl_get();
     return 0;
   }
   else
   {
     printf("Entering ELSE statement check_all_matched \n");
     printf("All system calls did not match\n");
+    printf("Entering curl 2\n");
     printf("Exiting program check_all_matched \n");
+
     return 1;
   }
 }

@@ -25,13 +25,19 @@ VERSION?=$(shell git describe --abbrev=8 --dirty --always || echo '\<nogit\>')
 CFLAGS+=-D_GNU_SOURCE -g -std=gnu99 -O2 -Wunused-variable
 CFLAGS+=-DVERSION=\"$(VERSION)\"
 
-LDFLAGS+=-static -ldl 
-LIBS=-lelf -lpthread -lz 
-HEADERS=*.h makefile
-INCLUDES=-I/usr/include/libelf -I.
-SOURCES= common.c dbm.c traces.c syscalls.c dispatcher.c signals.c util.S
-SOURCES+=api/helpers.c api/plugin_support.c api/branch_decoder_support.c api/load_store.c api/internal.c api/hash_table.c
-SOURCES+=elf/elf_loader.o elf/symbol_parser.o
+#link curl dynamically
+# i am getting this error when i try to link curl statically: "undefined reference to `__stack_chk_fail_local'"
+#error: /usr/bin/ld: /usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu/libcurl.a(libcurl_la-content_encoding.o): relocation R_X86_64_PC32 against symbol `inflateEnd' can not be used when making a shared object; recompile with -fPIC
+
+
+
+LDFLAGS+=-static -ldl -Wl,-Bstatic -Wl,-Bdynamic
+LIBS=-lelf -lpthread -lz -lcurl -lssl -lcrypto
+HEADERS=*.h makefile 
+INCLUDES=-I/usr/include/libelf -I. 
+SOURCES= common.c dbm.c traces.c syscalls.c dispatcher.c signals.c util.S 
+SOURCES+=api/helpers.c api/plugin_support.c api/branch_decoder_support.c api/load_store.c api/internal.c api/hash_table.c 
+SOURCES+=elf/elf_loader.o elf/symbol_parser.o 
 
 
 ARCH=$(shell $(CC) -dumpmachine | awk -F '-' '{print $$1}')
@@ -46,13 +52,13 @@ ifeq ($(findstring arm, $(ARCH)), arm)
 	SOURCES += api/emit_arm.c api/emit_thumb.c
 endif
 ifeq ($(ARCH),aarch64)
-	HEADERS += api/emit_a64.h
-	LDFLAGS += -Wl,-Ttext-segment=$(or $(TEXT_SEGMENT),0x7000000000)
-	PIE += pie/pie-a64-field-decoder.o pie/pie-a64-encoder.o pie/pie-a64-decoder.o
-	SOURCES += arch/aarch64/dispatcher_aarch64.S arch/aarch64/dispatcher_aarch64.c
-	SOURCES += arch/aarch64/scanner_a64.c
+	HEADERS += api/emit_a64.h 
+	LDFLAGS += -Wl,-Ttext-segment=$(or $(TEXT_SEGMENT),0x7000000000) 
+	PIE += pie/pie-a64-field-decoder.o pie/pie-a64-encoder.o pie/pie-a64-decoder.o 
+	SOURCES += arch/aarch64/dispatcher_aarch64.S arch/aarch64/dispatcher_aarch64.c  
+	SOURCES += arch/aarch64/scanner_a64.c 
 	SOURCES += api/emit_a64.c
-endif
+endif 
 
 ifdef PLUGINS
 	CFLAGS += -DPLUGINS_NEW
