@@ -72,6 +72,7 @@ int curl_get()
   if (curl)
   {
     struct curl_slist *headers = NULL;
+    // Set the URL, POST fields and headers for the request
     headers = curl_slist_append(headers, "Content-Type: text/plain");
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     // Set the URL
@@ -165,7 +166,7 @@ void write_bbv_list_to_file(const char *filename, bbv_count_t *head)
 
   while (head != NULL)
   {
-    fprintf(f, "%d \n", head->syscall);
+    fprintf(f, "%d, %d\n", head->syscall, head->called);
     head = head->next;
   }
   fclose(f);
@@ -251,9 +252,8 @@ int check_all_matched(bool all_matched)
     printf("All system calls did not match\n");
     printf("Entering curl 2\n");
     printf("Exiting program check_all_matched \n");
-
-    return 1;
   }
+  return 1;
 }
 
 void free_bbv_list(mambo_context *ctx, bbv_count_t *head)
