@@ -17,6 +17,7 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 */
+
 #ifdef PLUGINS_NEW
 
 #include <stdio.h>
@@ -172,7 +173,6 @@ void write_bbv_list_to_file(const char *filename, bbv_count_t *head)
   fclose(f);
   printf("Exiting write_bbv_to_file \n");
 }
-
 bool compare_bbv_to_file(bbv_count_t *head, const char *filename)
 {
   printf("Entering compare_bbv_to_file \n");
@@ -350,6 +350,3 @@ __attribute__((constructor)) void bbv_init_plugin()
 }
 
 #endif
-
-// print off syscall as it is happening
-// create a dashboard
