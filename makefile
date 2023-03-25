@@ -1,4 +1,4 @@
-PLUGINS+=plugins/bbv.c
+PLUGINS+=plugins/scd.c
 #PLUGINS+=plugins/soft_div.c
 #PLUGINS+=plugins/tb_count.c
 #PLUGINS+=plugins/mtrace.c plugins/mtrace.S
