@@ -2,7 +2,8 @@
   This file is part of MAMBO, a low-overhead dynamic binary modification tool:
       https://github.com/beehive-lab/mambo
 
-    Copyright (C) 2023 Liverpool John Moores University
+
+    Copyright (C) 2023 Muhammad Shirazul Haque - Liverpool John Moores University
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -29,15 +30,17 @@
 #include <stdlib.h>
 #include <curl/curl.h>
 
+// define a struct to hold the system call number and the number of times it is called
 typedef struct scd_count
 {
-  unsigned int called;  // number of times the system call is called
-  unsigned int syscall; // the system call number
-  struct scd_count *next;
+  unsigned int called;    // number of times the system call is called
+  unsigned int syscall;   // the system call number
+  struct scd_count *next; // pointer to the next node
 } scd_count_t;
 
-// implement a GET function that uses curl to post the data to a localhost server
-int curl_get()
+//// CURL FUNCTION ////
+// implement a POST function that uses curl to post the data to a localhost server
+int curl_post()
 {
   CURL *curl;
   CURLcode res;
@@ -101,8 +104,17 @@ int curl_get()
   return 0;
 }
 
+// function to add a new node to the linked list of system calls
+// if the system call is already in the list, increment the number of times it is called
+// if the system call is not in the list, add it to the list
 void inc_scd_syscall_in_list(scd_count_t *head, unsigned int search_syscall)
 {
+  if (head == NULL)
+  {
+    printf("Error: head is NULL in inc_scd_syscall_in_list \n");
+    return;
+  }
+
   scd_count_t *current = head;
   while (current != NULL)
   {
@@ -123,6 +135,7 @@ void inc_scd_syscall_in_list(scd_count_t *head, unsigned int search_syscall)
   current->next = new_scd_count;
 }
 
+// Function to print the linked list of system calls and the number of times they are called
 void print_scd_list(scd_count_t *head)
 {
   while (head != NULL)
@@ -136,7 +149,7 @@ void print_scd_list(scd_count_t *head)
 // writes to text file as a string
 void write_scd_list_to_string_file(const char *filename, scd_count_t *head)
 {
-  printf("Entering write_scd_to_string_file \n");
+  // printf("Entering write_scd_to_string_file \n");
   FILE *f = fopen(filename, "w");
   if (!f)
   {
@@ -151,12 +164,13 @@ void write_scd_list_to_string_file(const char *filename, scd_count_t *head)
   }
 
   fclose(f);
-  printf("Exiting write_scd_to_string_file \n");
+  // printf("Exiting write_scd_to_string_file \n");
 }
 
+// writes to text file as a file
 void write_scd_list_to_file(const char *filename, scd_count_t *head)
 {
-  printf("Entering write_scd_to_file \n");
+  // printf("Entering write_scd_to_file \n");
   FILE *f = fopen(filename, "w+");
   if (!f)
   {
@@ -170,14 +184,14 @@ void write_scd_list_to_file(const char *filename, scd_count_t *head)
     head = head->next;
   }
   fclose(f);
-  printf("Exiting write_scd_to_file \n");
+  // printf("Exiting write_scd_to_file \n");
 }
 
 bool compare_scd_to_file(scd_count_t *head, const char *filename)
 {
-  printf("Entering compare_scd_to_file \n");
+  // printf("Entering compare_scd_to_file \n");
   FILE *fp = fopen(filename, "r");
-  printf("Entering compare_scd_to_file - File 1 \n");
+  // printf("Entering compare_scd_to_file - File 1 \n");
 
   if (!fp)
   {
@@ -208,12 +222,12 @@ bool compare_scd_to_file(scd_count_t *head, const char *filename)
     }
   }
   fclose(fp);
-  printf("Closed File 1 in compare_scd_to_file \n");
+  // printf("Closed File 1 in compare_scd_to_file \n");
 
   scd_count_t *current = head;
   while (current != NULL)
   {
-    printf("Entering compare_scd_to_file - File 2 \n");
+    //  printf("Entering compare_scd_to_file - File 2 \n");
     found_in_file = false;
     FILE *fp = fopen(filename, "r");
     while (fscanf(fp, "%d", &syscall) == 1)
@@ -233,34 +247,39 @@ bool compare_scd_to_file(scd_count_t *head, const char *filename)
   }
   fclose(fp);
 
-  printf("Exiting compare_scd_to_file \n");
+  // printf("Exiting compare_scd_to_file \n");
   return all_matched;
-  printf("Returning all_matched in compare_scd_to_file \n");
+  // printf("Returning all_matched in compare_scd_to_file \n");
 }
 
+// function to check if all system calls matched
 int check_all_matched(bool all_matched)
 {
   if (all_matched)
   {
-    printf("Entering IF statement check_all_matched \n");
+    //  printf("Entering IF statement check_all_matched \n");
     printf("All system calls matched\n");
     //  printf("Entering curl 1\n");
-    curl_get();
-    printf("Exiting program check_all_matched \n");
+    //  printf("Exiting program check_all_matched \n");
     return 0;
   }
   else
   {
-    printf("Entering ELSE statement check_all_matched \n");
+    // printf("Entering ELSE statement check_all_matched \n");
     printf("All system calls did not match\n");
-    printf("Entering curl 2\n");
-    printf("Exiting program check_all_matched \n");
+    // printf("Entering curl 2\n");
+    //  printf("Exiting program check_all_matched \n");
   }
   return 1;
 }
 
+// this function is called when the program exits to free the memory allocated for the linked list of system calls
 void free_scd_list(mambo_context *ctx, scd_count_t *head)
 {
+  if (head == NULL)
+  {
+    return;
+  }
   scd_count_t *last;
   last = head;
   head = head->next;
@@ -270,28 +289,11 @@ void free_scd_list(mambo_context *ctx, scd_count_t *head)
   {
     last = head;
     head = head->next;
-    mambo_free(ctx, last);
+    free(last);
   }
 }
 
-/*void scd_check_dup(scd_count_t *head)
-{
-  scd_count_t *search;
-  while (head != NULL)
-  {
-    search = head->next;
-    while (search != NULL)
-    {
-      if (head->syscall == search->syscall)
-      {
-        printf("match for syscall %d called %d times with syscall %d called %d times\n", head->syscall, head->called, search->syscall, search->called);
-      }
-      search = search->next;
-    }
-    head = head->next;
-  }
-}*/
-
+// function is called when a syscall is executed and adds it to the list
 void scd_exe(scd_count_t *scd_list)
 {
   assert(scd_list != NULL);
@@ -303,53 +305,50 @@ int scd_hook(mambo_context *ctx)
   if (ctx->code.inst == A64_SVC)
   {
     scd_count_t *scd_list = (scd_count_t *)mambo_get_thread_plugin_data(ctx);
-    // fprintf(stderr, "scd_hook called for %d %ls \n", mambo_get_inst(ctx), (uint32_t *)mambo_get_source_addr(ctx));
     emit_push(ctx, (1 << reg0) | (1 << reg1) | (1 << reg2));
     emit_set_reg_ptr(ctx, reg0, scd_list);
-    // emit_set_reg(ctx, reg1, mambo_get_inst_type(ctx));
-    // raise(SIGTRAP);
-    // emit_set_reg(ctx, reg2, (uintptr_t)mambo_get_source_addr(ctx));
     emit_mov(ctx, 1, 8);
-    // raise(SIGTRAP);
     emit_safe_fcall(ctx, scd_exe, 1);
     emit_pop(ctx, (1 << reg0) | (1 << reg1) | (1 << reg2));
     return 0;
   }
 }
 
+// function is called when a thread is created and sets the plugin data to the list
 int scd_pre_thread_handler(mambo_context *ctx)
 {
-  scd_count_t *scd_list = (scd_count_t *)mambo_alloc(ctx, sizeof(scd_count_t));
-  assert(scd_list != NULL);
-  mambo_set_thread_plugin_data(ctx, scd_list);
+  scd_count_t *scd_list = (scd_count_t *)mambo_alloc(ctx, sizeof(scd_count_t)); // allocate memory for the list
+  assert(scd_list != NULL);                                                     // check if memory was allocated
+  mambo_set_thread_plugin_data(ctx, scd_list);                                  // set the list as the thread's plugin data
 }
 
+// function is called when a thread is destroyed
 int scd_post_thread_handler(mambo_context *ctx)
 {
-  scd_count_t *scd_list = (scd_count_t *)mambo_get_thread_plugin_data(ctx);
-  check_all_matched(compare_scd_to_file(scd_list, "whitelist.txt"));
-  write_scd_list_to_file("syscall_list_runtime.txt", scd_list);
-  write_scd_list_to_string_file("output.txt", scd_list);
-  print_scd_list(scd_list);
-  // scd_check_dup(scd_list);
-  free_scd_list(ctx, scd_list);
+  scd_count_t *scd_list = (scd_count_t *)mambo_get_thread_plugin_data(ctx); // get the list from the thread's plugin data
+  check_all_matched(compare_scd_to_file(scd_list, "whitelist.txt"));        // check if all system calls are in the whitelist
+  write_scd_list_to_file("syscall_list_runtime.txt", scd_list);             // write the list to a file                 // write the list to a string file
+  curl_post();                                                              // post the string file to the server
+  print_scd_list(scd_list);                                                 // print the list
+  free_scd_list(ctx, scd_list);                                             // free the memory allocated for the list
 }
 
+// function is called when the program exits
 int scd_exit_handler(mambo_context *ctx)
 {
-  fprintf(stderr, "Exit called:\n");
+  fprintf(stderr, "Exit called:\n"); // print exit message
 }
 
-__attribute__((constructor)) void scd_init_plugin()
+// function is called when the plugin is loaded
+__attribute__((constructor)) void scd_init_plugin() // __attribute__((constructor)) is a gcc extension
 {
-  mambo_context *ctx = mambo_register_plugin();
-  assert(ctx != NULL);
-  mambo_register_pre_thread_cb(ctx, &scd_pre_thread_handler);
-  // mambo_register_pre_fragment_cb(ctx, &scd_hook);
-  mambo_register_pre_inst_cb(ctx, &scd_hook);
-  mambo_register_post_thread_cb(ctx, &scd_post_thread_handler);
-  mambo_register_exit_cb(ctx, &scd_exit_handler);
-  setlocale(LC_NUMERIC, "");
+  mambo_context *ctx = mambo_register_plugin();                 // register the plugin
+  assert(ctx != NULL);                                          // check if the plugin was registered
+  mambo_register_pre_thread_cb(ctx, &scd_pre_thread_handler);   // register the pre thread handler
+  mambo_register_pre_inst_cb(ctx, &scd_hook);                   // register the pre instruction handler
+  mambo_register_post_thread_cb(ctx, &scd_post_thread_handler); // register the post thread handler
+  mambo_register_exit_cb(ctx, &scd_exit_handler);               // register the exit handler
+  setlocale(LC_NUMERIC, "");                                    // set the locale to the default
 }
 
 #endif
